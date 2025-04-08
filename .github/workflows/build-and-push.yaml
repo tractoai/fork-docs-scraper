@@ -1,0 +1,48 @@
+on: workflow_dispatch
+jobs:
+  build:
+    env:
+      REGISTRY: cr.eu-north1.nebius.cloud/e00faee7vas5hpsh3s/common-cr/tracto-ai/main
+      IMAGE_NAME: 'fork-docs-scraper'
+    name: Build scraper
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout main repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: 'Prepare nebius registry cred helper'
+        env:
+          REGISTRY_SA_FILE: ${{ secrets.NEWBIUS_REGISTRY_PUSHER_SA_CREDENTIALS_FILE }}
+        run: prepare_registry_cred_helper
+      - name: Configure Git to allow dubious ownership
+        run: git config --global --add safe.directory $GITHUB_WORKSPACE
+      - name: Get docker version
+        run: |
+          NOW=$(date +'%Y-%m-%dT%H-%M-%S')
+          COMMIT_NAME=$(git log -n 1 --pretty=format:%H)
+          DOCKER_TAG="${NOW}__${COMMIT_NAME}"
+          echo "Release build version: ${DOCKER_TAG}"
+          echo "DOCKER_TAG=$DOCKER_TAG" >> "$GITHUB_ENV"
+      - name: Extract tags for Docker
+        id: meta
+        uses: docker/metadata-action@v5.0.0
+        with:
+          images: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ env.DOCKER_TAG }}
+      - name: Build and push Docker image
+        id: build_image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+        env:
+          DOCKER_BUILD_RECORD_UPLOAD: false
+          DOCKER_BUILD_SUMMARY: false
