@@ -91,6 +91,7 @@ def run_config(config):
         # Use our custom dupefilter in order to be scheme agnostic regarding link provided
         'DUPEFILTER_CLASS': DUPEFILTER_CLASS_PATH,
         'DEFAULT_REQUEST_HEADERS': DEFAULT_REQUEST_HEADERS,
+        'DNS_RESOLVER': 'scrapy.resolver.CachingHostnameResolver',
     })
 
     process.crawl(
